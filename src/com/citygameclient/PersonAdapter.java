@@ -32,7 +32,7 @@ public class PersonAdapter extends ArrayAdapter<Person> {
             row = inflater.inflate(layoutResourceId, parent, false);
             holder = new PersonHolder();
             holder.nicknameHolder = (TextView)row.findViewById(R.id.nickname);
-            holder.eposHolder = (TextView)row.findViewById(R.id.epos);
+            holder.eposHolder = (TextView)row.findViewById(R.id.epos_value);
             holder.nposHolder=(TextView)row.findViewById(R.id.npos);
 
             row.setTag(holder);

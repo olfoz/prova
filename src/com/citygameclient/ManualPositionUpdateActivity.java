@@ -7,12 +7,11 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
@@ -22,63 +21,96 @@ import org.json.JSONObject;
 
 import android.app.Activity;
 import android.content.pm.ActivityInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.TextView;
 
 public class ManualPositionUpdateActivity extends Activity{
 
+	TextView textView;
+	Spinner spinner;
+	EditText ePos;
+	EditText nPos;
+	static String updateUrl ="http://laghenga.altervista.org/citygame/insertpeoplepos.php";
+	static String listUrl ="http://laghenga.altervista.org/citygame/peoplelist.php";
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 		 setContentView(R.layout.update_person_pos_man_act);
-	    InputStream is= getInputStreamFromUrl("http://laghenga.altervista.org/citygame/peoplelist.php");
-	    String inputString=convertStreamToString( is);
-	    Spinner spinner= (Spinner)findViewById(R.id.spinner1);
-	    ArrayAdapter<String> spinnerArrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, JSONParser(inputString));
-	    spinner.setAdapter(spinnerArrayAdapter);
-	    final Button button = (Button) findViewById(R.id.button_invia);
-        button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-            	//http post
-            	try{
-            	        HttpClient httpclient = new DefaultHttpClient();
-            	        HttpPost httppost = new HttpPost("http://laghenga.altervista.org/citygame/insertpeoplepos.php");
-            	        ArrayList<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
-            	        nameValuePairs.add(new BasicNameValuePair("NICKNAME","Alscocco"));
-            	        nameValuePairs.add(new BasicNameValuePair("EPOSITION","2"));
-            	        nameValuePairs.add(new BasicNameValuePair("NPOSITION","3"));
-            	        httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-            	        HttpResponse response = httpclient.execute(httppost);
-            	        HttpEntity entity = response.getEntity();
-            	        InputStream is = entity.getContent();
-            	}catch(Exception e){
-            	        Log.e("log_tag", "Error in http connection "+e.toString());
-            	}
-            	//convert response to string
-            }
-        });
-
+		 textView = new TextView(this);
+		 new SpinnerFillTask().execute(listUrl);
+	   
 	}
+	private class SpinnerFillTask extends AsyncTask<String, Void, String> {
+		 @Override
+	        protected void onPreExecute() {
+	            super.onPreExecute();
+	            textView.setText("Loading...");
+	            setContentView(textView);
+	        }
 
-	 public InputStream getInputStreamFromUrl(String url) {
-		  InputStream content = null;
-		  try {
-		    HttpClient httpclient = new DefaultHttpClient();
-		    HttpResponse response = httpclient.execute(new HttpGet(url));
-		    content = response.getEntity().getContent();
-		  } catch (Exception e) {
-		    Log.w("[GET REQUEST]", "Network exception", e);
-		  }
-		    return content;
+		    protected String doInBackground(String... urls) {
+		        try {
+		            return httpResult(urls[0]);
+		        } catch (Exception e) {
+		            return null;
+		        }
+		    }
+
+		    protected void onPostExecute(String result) {
+		    		setContentView(R.layout.update_person_pos_man_act);
+				    spinner= (Spinner)findViewById(R.id.spinner1);
+				    ArrayAdapter<String> spinnerArrayAdapter = new ArrayAdapter<String>(ManualPositionUpdateActivity.this, android.R.layout.simple_spinner_dropdown_item, JSONParser(result));
+				    spinner.setAdapter(spinnerArrayAdapter);	
+
+					
+					       
+					ePos = (EditText) findViewById(R.id.epos_value);
+					nPos = (EditText) findViewById(R.id.npos_value);
+				    final Button button = (Button) findViewById(R.id.button_invia);
+			        button.setOnClickListener(new View.OnClickListener() {
+			            public void onClick(View v) {
+			            	String user =String.valueOf(spinner.getSelectedItem());
+			            	String longitude= ePos.getText().toString();
+			            	String latitude= nPos.getText().toString();
+			            	 new updateTask().execute(updateUrl,user,longitude,latitude);
+			            }
+			        });
+			     }
+		}
+	
+	public String httpResult(String url){
+		 HttpClient httpClient = new DefaultHttpClient();
+		 HttpPost httpPost = new HttpPost(url);
+		 List<NameValuePair> nameValue = new ArrayList<NameValuePair>();
+		 HttpResponse httpResponse;
+		 InputStream is;
+		try {
+				httpPost.setEntity(new UrlEncodedFormEntity(nameValue));
+				httpResponse = httpClient.execute(httpPost);
+				is = httpResponse.getEntity().getContent();
+			} 
+		catch (ClientProtocolException e1) {
+				is=null;
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} 
+		catch (IOException e1) {
+				is=null;
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		return convertStreamToString(is);	
 		}
 	 
-	 public String convertStreamToString(InputStream is) {
+	 private String convertStreamToString(InputStream is) {
 		    /*
 		     * To convert the InputStream to String we use the BufferedReader.readLine()
 		     * method. We iterate until the BufferedReader return null which means
@@ -104,7 +136,6 @@ public class ManualPositionUpdateActivity extends Activity{
 		    }
 		    return sb.toString();
 		}
-	 
 	 public  ArrayList<String> JSONParser(String JSONSource){
 			ArrayList<String> resultArray= new ArrayList<String>();
 			JSONArray jsonArray;
@@ -122,4 +153,56 @@ public class ManualPositionUpdateActivity extends Activity{
 			}
 			return resultArray;
 		}
+	 
+	 public String httpPostValues(String url,List<NameValuePair> nameValueList){
+		 HttpClient httpClient = new DefaultHttpClient();
+		 HttpPost httpPost = new HttpPost(url);
+		 HttpResponse httpResponse;
+		 InputStream is;
+		try {
+				httpPost.setEntity(new UrlEncodedFormEntity(nameValueList));
+				httpResponse = httpClient.execute(httpPost);
+				is = httpResponse.getEntity().getContent();
+			} 
+		catch (ClientProtocolException e1) {
+				is=null;
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} 
+		catch (IOException e1) {
+				is=null;
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		return convertStreamToString(is);	
+		}
+
+	 private class updateTask extends AsyncTask<String, Void, String> {
+		 @Override
+	        protected void onPreExecute() {
+	            super.onPreExecute();
+	            textView.setText("Loading...");
+	            setContentView(textView);
+	        }
+
+		    protected String doInBackground(String... param) {
+		        try {
+		   		 	List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+		   		 	nameValuePairs.add(new BasicNameValuePair("NICKNAME",param[1]));
+		   		 	nameValuePairs.add(new BasicNameValuePair("EPOS",param[2]));
+		   		 	nameValuePairs.add(new BasicNameValuePair("NPOS",param[3]));
+
+		            return httpPostValues(param[0],nameValuePairs);
+		        } catch (Exception e) {
+		            return null;
+		        }
+		    }
+
+		    protected void onPostExecute(String result) {
+		    	setContentView(R.layout.webpage_source_display);
+		    	TextView websourceDisplay=(TextView)findViewById(R.id.websource);
+	    	    websourceDisplay.setText(result);
+			     }
+		}
+
 }

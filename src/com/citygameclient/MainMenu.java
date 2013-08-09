@@ -8,7 +8,7 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
 public class MainMenu extends ListActivity {
-	String Lista[]={"DisplayListActivity","ConnectActivity","DisplayJsonStringsActivity","DisplayJsonPersonActivity","ManualPositionUpdateActivity"};
+	String Lista[]={"ConnectActivity","DisplayJsonPersonActivity","ManualPositionUpdateActivity"};
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		// TODO Auto-generated method stub
